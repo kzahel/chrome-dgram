@@ -459,8 +459,25 @@ Socket.prototype.addMembership = function (multicastAddress,
                                            multicastInterface,
                                            callback) {
   var self = this
+  // XXX: with two optional arguments, (one from node API, and an chrome side, this is a mess.
+  // assume nobody put in the "chrome-specific" callback
   if (!callback) callback = function () {}
-  chrome.sockets.udp.joinGroup(self.id, multicastAddress, callback)
+  if (self._bindState === BIND_STATE_BOUND) {
+    addMembership(callback)
+  } else {
+    self._bindTasks.push({
+      fn: addMembership,
+      callback: callback
+    })
+  }
+
+  function addMembership (callback) {
+    if (multicastInterface === undefined) {
+      chrome.sockets.udp.joinGroup(self.id, multicastAddress, callback)
+    } else {
+      chrome.sockets.udp.joinGroup(self.id, multicastAddress, multicastInterface, callback)
+    }
+  }
 }
 
 /**
